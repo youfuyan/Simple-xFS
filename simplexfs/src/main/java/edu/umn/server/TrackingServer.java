@@ -17,9 +17,18 @@ public class TrackingServer {
     private int port;
     private Map<String, FileInfo> fileRegistry;
 
+    private ServerSocket serverSocket;
+
+    private volatile boolean running;
+
+
     public TrackingServer(int port) {
         this.port = port;
         this.fileRegistry = new ConcurrentHashMap<>();
+    }
+
+    public Map<String, FileInfo> getFileRegistry() {
+        return fileRegistry;
     }
 
     private static class FileInfo {
@@ -36,14 +45,18 @@ public class TrackingServer {
         private String ipAddress;
         private int port;
 
+
         public PeerInfo(String ipAddress, int port) {
             this.ipAddress = ipAddress;
             this.port = port;
         }
     }
     public void start() {
+        running = true;
+        System.out.println("Starting server on port " + port);
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            while (true) {
+            this.serverSocket = serverSocket; // Store the reference to the server socket
+            while (running) {
                 Socket socket = serverSocket.accept();
                 // Handle incoming connections from peer nodes
                 try (ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
@@ -68,7 +81,14 @@ public class TrackingServer {
             e.printStackTrace();
         }
     }
-
+    public void stop() {
+        running = false;
+        try {
+            serverSocket.close(); // Close the server socket
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     private List<String> find(String filename) {
         // Returns the list of peers that store the specified file and the file's checksum
         FileInfo fileInfo = fileRegistry.get(filename);
@@ -84,6 +104,9 @@ public class TrackingServer {
     }
 
     private void receiveFileList(String ipAddress, int port, Map<String, String> fileList) {
+        // Debug: Print the received file list
+        System.out.println("Received file list: " + fileList);
+
         // Receives and updates the file list and checksums for the specified peer
         PeerInfo peerInfo = new PeerInfo(ipAddress, port);
         for (Map.Entry<String, String> entry : fileList.entrySet()) {
@@ -96,6 +119,9 @@ public class TrackingServer {
             }
             fileInfo.peers.put(peerInfo.ipAddress, peerInfo);
         }
+
+        // Debug: Print the updated fileRegistry
+        System.out.println("Updated file registry: " + fileRegistry);
     }
 
     private void updateList(String ipAddress, int port, Map<String, String> fileList) {
@@ -109,4 +135,9 @@ public class TrackingServer {
         receiveFileList(ipAddress, port, fileList);
     }
 
+    public static void main(String[] args) {
+        TrackingServer trackingServer = new TrackingServer(8080);
+        trackingServer.start();
+
+    }
 }

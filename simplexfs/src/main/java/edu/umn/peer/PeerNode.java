@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 
 public class PeerNode {
@@ -24,6 +25,10 @@ public class PeerNode {
     private LatencyTable latencyTable;
     private int loadIndex;
     private ThreadPoolExecutor executor;
+
+    private ServerSocket serverSocket;
+
+    private volatile boolean running;
 
     // Define constants for max retries and buffer size for file transfer
     private static final int MAX_RETRIES = 3;
@@ -50,6 +55,11 @@ public class PeerNode {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        // Debug: Print the fileChecksums map
+        System.out.println("File checksums: " + fileChecksums);
+        // Debug: Print the file names in the fileChecksums map
+        System.out.println("File names: " + fileChecksums.keySet());
+
     }
 
 
@@ -73,8 +83,11 @@ public class PeerNode {
     }
 
     public void start() {
+        System.out.println("Starting peer node on port " + port);
+        running = true;
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            while (true) {
+            this.serverSocket = serverSocket;
+            while (running) {
                 Socket socket = serverSocket.accept();
                 // Handle incoming connections from other peers and the server
                 // Spawn a new thread to handle each connection
@@ -85,6 +98,20 @@ public class PeerNode {
         }
     }
 
+    public void stop() {
+        running = false;
+        executor.shutdown();
+        try {
+            executor.awaitTermination(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        try {
+            serverSocket.close(); // Close the server socket
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     private void handleConnection(Socket socket) {
