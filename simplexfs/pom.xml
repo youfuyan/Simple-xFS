@@ -8,19 +8,49 @@
     <artifactId>simplexfs</artifactId>
     <version>1.0-SNAPSHOT</version>
     <dependencies>
-        <!-- JUnit 5 Dependency -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>5.8.2</version>
-            <scope>test</scope>
-        </dependency>
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>5.8.2</version>
+        <scope>test</scope>
+    </dependency>
     </dependencies>
-
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-    
+    <build>
+        <finalName>simplexfs</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>11</source>
+                    <target>11</target>
+                </configuration>
+            </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.0.0-M6</version>
+                    <configuration>
+                        <runOrder>alphabetical</runOrder>
+                        <useFile>false</useFile>
+                        <redirectTestOutputToFile>false</redirectTestOutputToFile>
+                        <printSummary>true</printSummary>
+                        <skipTests>false</skipTests>
+                        <skip>false</skip>
+                        <outputDirectory>${project.build.directory}/surefire-reports</outputDirectory>
+                        <reportFormat>plain</reportFormat>
+                        <useSystemClassLoader>false</useSystemClassLoader>
+                    </configuration>
+                </plugin>
+
+
+        </plugins>
+    </build>
 </project>

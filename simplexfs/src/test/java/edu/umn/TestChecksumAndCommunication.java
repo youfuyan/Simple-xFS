@@ -4,6 +4,7 @@ import edu.umn.peer.PeerNode;
 import edu.umn.server.TrackingServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+
 import org.junit.jupiter.api.Test;
 
 import java.net.URL;
@@ -14,7 +15,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-public class testChecksumAndCommunication {
+public class TestChecksumAndCommunication {
     private TrackingServer server;
     private PeerNode peerNode1;
     private PeerNode peerNode2;
@@ -44,11 +45,9 @@ public class testChecksumAndCommunication {
         peerNode2.initialize();
 
         // Start peer nodes in separate threads
-        // Start peer nodes in separate threads
-        Thread.sleep(1000); // Introduce a delay before starting the peer nodes
+
         new Thread(() -> peerNode1.start()).start();
         new Thread(() -> peerNode2.start()).start();
-        // Allow time for the peer nodes to start
         Thread.sleep(1000);
 
     }
@@ -80,6 +79,8 @@ public class testChecksumAndCommunication {
         String computedChecksum2 = peerNode2.getFileChecksums().get("sample2.txt");
         String actualChecksum2 = computeChecksum(Path.of(getClass().getClassLoader().getResource("files/peer2/sample2.txt").toURI()));
         assertEquals(computedChecksum2, actualChecksum2);
+
+
     }
     private static String computeChecksum(Path filePath) throws Exception {
         byte[] fileBytes = Files.readAllBytes(filePath);
@@ -103,6 +104,6 @@ public class testChecksumAndCommunication {
         server.stop();
         peerNode1.stop();
         peerNode2.stop();
-
+        Thread.sleep(1000);
     }
 }

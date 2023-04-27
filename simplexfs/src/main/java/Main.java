@@ -10,13 +10,12 @@ import java.util.List;
 class Main {
     public static void main(String[] args) throws InterruptedException {
         // Get the path to the test resources directory
-        String homeDirectory = System.getProperty("user.home");
-        String resourcePath = homeDirectory + "/Desktop/UMN/2023Spring/CSCI5105/5105-P3/simplexfs/src/test/resources/files";
-
-        System.out.println(resourcePath);
-        if (resourcePath == null) {
+        URL resourceUrl = Main.class.getClassLoader().getResource("files");
+        System.out.println(resourceUrl);
+        if (resourceUrl == null) {
             throw new RuntimeException("Test resources not found");
         }
+        String resourcePath = resourceUrl.getPath();
         String latencyFilePath = resourcePath + "/latency.csv"; // Update this path as needed
 
         // Start the tracking server

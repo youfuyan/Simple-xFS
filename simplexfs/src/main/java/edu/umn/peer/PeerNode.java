@@ -5,6 +5,7 @@ import edu.umn.utils.LatencyTable;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -88,15 +89,22 @@ public class PeerNode {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             this.serverSocket = serverSocket;
             while (running) {
-                Socket socket = serverSocket.accept();
-                // Handle incoming connections from other peers and the server
-                // Spawn a new thread to handle each connection
-                executor.submit(() -> handleConnection(socket));
+                try {
+                    Socket socket = serverSocket.accept();
+                    // Handle incoming connections from other peers and the server
+                    // Spawn a new thread to handle each connection
+                    executor.submit(() -> handleConnection(socket));
+                } catch (SocketException e) {
+                    if (running) {
+                        e.printStackTrace();
+                    }
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
 
     public void stop() {
         running = false;
@@ -115,7 +123,47 @@ public class PeerNode {
 
 
     private void handleConnection(Socket socket) {
-        // Handle communication with other peers and the tracking server
+        try (ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
+             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
+
+            String requestType = (String) inputStream.readObject();
+            if ("FIND".equals(requestType)) {
+                // Handle FIND request from other peers or the tracking server
+//                handleFindRequest(inputStream, outputStream);
+            } else if ("UPDATE_LIST".equals(requestType)) {
+                // Handle UPDATE_LIST request from other peers or the tracking server
+//                handleUpdateListRequest(inputStream);
+            } else {
+                // Unknown request type
+                //
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+//    private void handleFindRequest(ObjectInputStream inputStream, ObjectOutputStream outputStream) throws IOException {
+////        try {
+////            String filename = (String) inputStream.readObject();
+////            List<String> peerList = findFile(filename, serverIpAddress, serverPort);
+////            outputStream.writeObject(peerList);
+////        } catch (ClassNotFoundException e) {
+////            e.printStackTrace();
+////        }
+////    }
+
+//    private void handleUpdateListRequest(ObjectInputStream inputStream) throws IOException {
+//        try {
+//            @SuppressWarnings("unchecked")
+//            Map<String, String> fileList = (Map<String, String>) inputStream.readObject();
+//            updateFileListFromPeers(fileList);
+//        } catch (ClassNotFoundException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
+    private void updateFileListFromPeers(Map<String, String> fileList) {
+        // Update the fileChecksums map with the received file list from other peers
         // ...
     }
 
@@ -131,7 +179,7 @@ public class PeerNode {
 
             // Receive response
             @SuppressWarnings("unchecked")
-            List<String> peerList = (ArrayList<String>) inputStream.readObject();
+            List<String> peerList = (List<String>) inputStream.readObject();
             return peerList;
 
         } catch (IOException | ClassNotFoundException e) {

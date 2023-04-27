@@ -4,6 +4,7 @@ package edu.umn.server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,24 +58,30 @@ public class TrackingServer {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             this.serverSocket = serverSocket; // Store the reference to the server socket
             while (running) {
-                Socket socket = serverSocket.accept();
-                // Handle incoming connections from peer nodes
-                try (ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
-                     ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
+                try {
+                    Socket socket = serverSocket.accept();
+                    // Handle incoming connections from peer nodes
+                    try (ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
+                         ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
 
-                    String requestType = (String) inputStream.readObject();
-                    if ("FIND".equals(requestType)) {
-                        String filename = (String) inputStream.readObject();
-                        List<String> peerList = find(filename);
-                        outputStream.writeObject(peerList);
-                    } else if ("UPDATE_LIST".equals(requestType)) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, String> fileList = (HashMap<String, String>) inputStream.readObject();
-                        // Handle the received file list (peer IP address and port can be obtained from the socket)
-                        receiveFileList(socket.getInetAddress().getHostAddress(), socket.getPort(), fileList);
+                        String requestType = (String) inputStream.readObject();
+                        if ("FIND".equals(requestType)) {
+                            String filename = (String) inputStream.readObject();
+                            List<String> peerList = find(filename);
+                            outputStream.writeObject(peerList);
+                        } else if ("UPDATE_LIST".equals(requestType)) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, String> fileList = (HashMap<String, String>) inputStream.readObject();
+                            // Handle the received file list (peer IP address and port can be obtained from the socket)
+                            receiveFileList(socket.getInetAddress().getHostAddress(), socket.getPort(), fileList);
+                        }
+                    } catch (IOException | ClassNotFoundException e) {
+                        e.printStackTrace();
                     }
-                } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
+                } catch (SocketException e) {
+                    if (running) {
+                        e.printStackTrace();
+                    }
                 }
             }
         } catch (IOException e) {
