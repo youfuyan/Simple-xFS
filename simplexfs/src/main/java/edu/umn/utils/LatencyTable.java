@@ -86,9 +86,9 @@ public class LatencyTable {
         //save file to src/main/resources/latency.txt
         String latencyFilePath = "src/main/resources/files/latency.txt";
         //set random seed to keep the same random values
-        int seed = 5015;
+        int seed = 5105;
         //generate fake latency file
-        generateFakeLatencyFile(latencyFilePath, 8001, 8004, seed);
+        generateFakeLatencyFile(latencyFilePath, 8001, 8005, seed);
         //create a latency table
         LatencyTable latencyTable = new LatencyTable(latencyFilePath);
         //print latency table

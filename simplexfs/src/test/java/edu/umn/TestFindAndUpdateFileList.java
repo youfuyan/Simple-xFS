@@ -30,7 +30,8 @@ public class TestFindAndUpdateFileList {
         // Start the tracking server
         server = new TrackingServer(8080);
         new Thread(() -> server.start()).start();
-
+        // Allow time for the server to start accepting connections
+        Thread.sleep(1000);
 
 
         // Initialize peer nodes using the test resources directory
@@ -45,7 +46,7 @@ public class TestFindAndUpdateFileList {
         new Thread(() -> peerNode1.start()).start();
         new Thread(() -> peerNode2.start()).start();
         // Allow time for the peer nodes to start
-//        Thread.sleep(1000);
+        Thread.sleep(1000);
 
     }
 
@@ -61,9 +62,11 @@ public class TestFindAndUpdateFileList {
         // Test findFile
         List<String> peerList = peerNode1.findFile("sample2.txt");
         //make sure findFile returns the correct peer
+//        Thread.sleep(500);
         assertEquals(1, peerList.size());
         // Test find non-exist file
-        List<String> peerList2 = peerNode2.findFile("sample3.txt");
+        List<String> peerList2 = peerNode2.findFile("non-exist.txt");
+//        Thread.sleep(500);
         //make sure findFile returns the correct peer
         assertEquals(0, peerList2.size());
         // Test server update file list

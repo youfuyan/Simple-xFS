@@ -48,7 +48,7 @@ public class TestChecksumAndCommunication {
 
         new Thread(() -> peerNode1.start()).start();
         new Thread(() -> peerNode2.start()).start();
-//        Thread.sleep(1000);
+        Thread.sleep(1000);
 
     }
 
@@ -65,12 +65,12 @@ public class TestChecksumAndCommunication {
         List<String> peerList1 = peerNode1.findFile("sample1.txt");
         List<String> peerList2 = peerNode1.findFile("sample2.txt");
 
-        // Verify that only peerNode1 has "sample1.txt" and only peerNode2 has "sample2.txt"
+        // Verify that only peerNode1 has "sample4.txt" and only peerNode2 has "sample2.txt"
         assertEquals(1, peerList1.size());
         assertEquals(1, peerList2.size());
 
 
-        // Verify that the computed checksum matches the actual checksum of "sample1.txt"
+        // Verify that the computed checksum matches the actual checksum of "sample4.txt"
         String computedChecksum1 = peerNode1.getFileChecksums().get("sample1.txt");
         String actualChecksum1 = computeChecksum(Path.of(getClass().getClassLoader().getResource("files/peer1/sample1.txt").toURI()));
         assertEquals(computedChecksum1, actualChecksum1);

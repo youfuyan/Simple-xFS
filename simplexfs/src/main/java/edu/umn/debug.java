@@ -29,21 +29,35 @@ public class debug {
         peerNode1.initialize();
         PeerNode peerNode2 = new PeerNode(resourcePath + "/peer2", 8002, latencyFilePath,"localhost",8080);
         peerNode2.initialize();
+        PeerNode peerNode3 = new PeerNode(resourcePath + "/peer3", 8003, latencyFilePath,"localhost",8080);
+        peerNode3.initialize();
+        PeerNode peerNode4 = new PeerNode(resourcePath + "/peer4", 8004, latencyFilePath,"localhost",8080);
+        peerNode4.initialize();
+        PeerNode peerNode5 = new PeerNode(resourcePath + "/peer5", 8005, latencyFilePath,"localhost",8080);
+        peerNode5.initialize();
+
 
         // Start peer nodes in separate threads
         new Thread(() -> peerNode1.start()).start();
         new Thread(() -> peerNode2.start()).start();
+        new Thread(() -> peerNode3.start()).start();
+        new Thread(() -> peerNode4.start()).start();
+        new Thread(() -> peerNode5.start()).start();
+
 
         // Update file list to the tracking server
         peerNode1.updateFileList();
         peerNode2.updateFileList();
+        peerNode3.updateFileList();
+        peerNode4.updateFileList();
+        peerNode5.updateFileList();
 
         // Allow time for the server to update the file list
         Thread.sleep(1000);
 
         // Test findFile
         List<String> peerList1 = peerNode1.findFile("sample2.txt");
-        List<String> peerList2 = peerNode2.findFile("sample1.txt");
+        List<String> peerList2 = peerNode2.findFile("test10Mb.db");
 
         //print the peerList
         System.out.println("peerList1: " + peerList1);
@@ -61,12 +75,12 @@ public class debug {
         int peerPort = Integer.parseInt(peerList1.get(0).split(":")[1]);
         System.out.println(peerPort);
         peerNode1.downloadFile("sample2.txt", peerIpAddress, peerPort);
-        //using peerList2 to download sample1.txt from peerList2.get(0)
+        //using peerList2 to download sample4.txt from peerList2.get(0)
         String peerIpAddress2 = peerList2.get(0).split(":")[0];
         System.out.println(peerIpAddress2);
         int peerPort2 = Integer.parseInt(peerList2.get(0).split(":")[1]);
         System.out.println(peerPort2);
-        peerNode2.downloadFile("sample1.txt", peerIpAddress2, peerPort2);
+        peerNode2.downloadFile("test10Mb.db", peerIpAddress2, peerPort2);
 
         // Allow time for the file transfer to complete
         Thread.sleep(1000);
@@ -78,16 +92,19 @@ public class debug {
             System.out.println("sample2.txt in peer1 is not the same as sample2.txt in peer2");
         }
         //check the file in peer2
-        System.out.println("sample1.txt in peer2: " + computeChecksum(Path.of(resourcePath + "/peer2/sample1.txt")));
-        if (computeChecksum(Path.of(resourcePath + "/peer1/sample1.txt")).equals(computeChecksum(Path.of(resourcePath + "/peer2/sample1.txt")))) {
-            System.out.println("sample1.txt in peer1 is the same as sample1.txt in peer2");
+        System.out.println("test10Mb.db in peer2: " + computeChecksum(Path.of(resourcePath + "/peer2/test10Mb.db")));
+        if (computeChecksum(Path.of(resourcePath + "/peer1/test10Mb.db")).equals(computeChecksum(Path.of(resourcePath + "/peer2/test10Mb.db")))) {
+            System.out.println("test10Mb.db in peer1 is the same as test10Mb.db in peer2");
         } else {
-            System.out.println("sample1.txt in peer1 is not the same as sample1.txt in peer2");
+            System.out.println("test10Mb.db in peer1 is not the same as test10Mb.db in peer2");
         }
 
         // Stop the peer nodes
         peerNode1.stop();
         peerNode2.stop();
+        peerNode3.stop();
+        peerNode4.stop();
+        peerNode5.stop();
         // Stop the tracking server
         server.stop();
     }
