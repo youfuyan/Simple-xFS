@@ -305,20 +305,42 @@ public class PeerNode {
 
 
 
+//    public void updateFileList() {
+//        // Updates the list of files stored in the specific directory and sends the updated list to the tracking server
+//        try (Socket socket = new Socket(trackingServer.ipAddress, trackingServer.port);
+//             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
+//
+//            // Send request
+//            outputStream.writeObject("UPDATE_LIST");
+//            outputStream.writeInt(port);
+//            outputStream.writeObject(fileChecksums);
+//
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
     public void updateFileList() {
         // Updates the list of files stored in the specific directory and sends the updated list to the tracking server
         try (Socket socket = new Socket(trackingServer.ipAddress, trackingServer.port);
-             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
+             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+             ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream())) {
 
             // Send request
             outputStream.writeObject("UPDATE_LIST");
             outputStream.writeInt(port);
             outputStream.writeObject(fileChecksums);
+            outputStream.flush();
 
-        } catch (IOException e) {
+            // Read response
+            String response = (String) inputStream.readObject();
+            System.out.println("Server response: " + response);
+
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
+
 
     private int getRemotePeerLoad(String ipAddress, int port) {
         int load = -1;

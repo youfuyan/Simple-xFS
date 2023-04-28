@@ -74,47 +74,102 @@ public class TrackingServer {
         }
     }
 
-    public synchronized void start() {
-        running = true;
-        System.out.println("Starting server on port " + port);
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            this.serverSocket = serverSocket; // Store the reference to the server socket
-            while (running) {
+//    public synchronized void start() {
+//        running = true;
+//        System.out.println("Starting server on port " + port);
+//        try (ServerSocket serverSocket = new ServerSocket(port)) {
+//            this.serverSocket = serverSocket; // Store the reference to the server socket
+//            while (running) {
+//                try {
+//                    Socket socket = serverSocket.accept();
+//                    // Handle incoming connections from peer nodes
+//                    try (ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
+//                         ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
+//
+//                        String requestType = (String) inputStream.readObject();
+//                        if ("FIND".equals(requestType)) {
+//                            String filename = (String) inputStream.readObject();
+//                            List<String> peerList = find(filename);
+//                            outputStream.writeObject(peerList);
+//                        } else if ("UPDATE_LIST".equals(requestType)) {
+//                            int peerPort = inputStream.readInt();
+//                            @SuppressWarnings("unchecked")
+//                            Map<String, String> fileList = (HashMap<String, String>) inputStream.readObject();
+//                            // Handle the received file list (peer IP address and port can be obtained from the socket)
+//                            receiveFileList(socket.getInetAddress().getHostAddress(), peerPort, fileList);
+//
+//                        } else {
+//                            // Unknown request type
+//                            System.out.println("Unknown request type: " + requestType);
+//                        }
+//                    } catch (IOException | ClassNotFoundException e) {
+//                        e.printStackTrace();
+//                    }
+//                } catch (SocketException e) {
+//                    if (running) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+public synchronized void start() {
+    running = true;
+    System.out.println("Starting server on port " + port);
+    try (ServerSocket serverSocket = new ServerSocket(port)) {
+        this.serverSocket = serverSocket; // Store the reference to the server socket
+        while (running) {
+            try {
+                Socket socket = serverSocket.accept();
+                // Handle incoming connections from peer nodes
+                ObjectInputStream inputStream = null;
+                ObjectOutputStream outputStream = null;
+
                 try {
-                    Socket socket = serverSocket.accept();
-                    // Handle incoming connections from peer nodes
-                    try (ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
-                         ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
+                    inputStream = new ObjectInputStream(socket.getInputStream());
+                    outputStream = new ObjectOutputStream(socket.getOutputStream());
 
-                        String requestType = (String) inputStream.readObject();
-                        if ("FIND".equals(requestType)) {
-                            String filename = (String) inputStream.readObject();
-                            List<String> peerList = find(filename);
-                            outputStream.writeObject(peerList);
-                        } else if ("UPDATE_LIST".equals(requestType)) {
-                            int peerPort = inputStream.readInt();
-                            @SuppressWarnings("unchecked")
-                            Map<String, String> fileList = (HashMap<String, String>) inputStream.readObject();
-                            // Handle the received file list (peer IP address and port can be obtained from the socket)
-                            receiveFileList(socket.getInetAddress().getHostAddress(), peerPort, fileList);
+                    String requestType = (String) inputStream.readObject();
+                    if ("FIND".equals(requestType)) {
+                        String filename = (String) inputStream.readObject();
+                        List<String> peerList = find(filename);
+                        outputStream.writeObject(peerList);
+                    } else if ("UPDATE_LIST".equals(requestType)) {
+                        int peerPort = inputStream.readInt();
+                        @SuppressWarnings("unchecked")
+                        Map<String, String> fileList = (HashMap<String, String>) inputStream.readObject();
+                        // Handle the received file list (peer IP address and port can be obtained from the socket)
+                        receiveFileList(socket.getInetAddress().getHostAddress(), peerPort, fileList);
+                        // Send response to the client
+                        outputStream.writeObject("UPDATE_LIST_SUCCESS");
 
-                        } else {
-                            // Unknown request type
-                            System.out.println("Unknown request type: " + requestType);
-                        }
-                    } catch (IOException | ClassNotFoundException e) {
-                        e.printStackTrace();
+                    } else {
+                        // Unknown request type
+                        System.out.println("Unknown request type: " + requestType);
                     }
-                } catch (SocketException e) {
-                    if (running) {
-                        e.printStackTrace();
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                } finally {
+                    if (inputStream != null) {
+                        inputStream.close();
+                    }
+                    if (outputStream != null) {
+                        outputStream.close();
                     }
                 }
+            } catch (SocketException e) {
+                if (running) {
+                    e.printStackTrace();
+                }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+}
+
     public void stop() {
         running = false;
         try {
