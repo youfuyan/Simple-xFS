@@ -25,18 +25,18 @@ public class TestFindAndUpdateFileList {
             throw new RuntimeException("Test resources not found");
         }
         String resourcePath = resourceUrl.getPath();
-        String latencyFilePath = resourcePath + "/latency.csv"; // Update this path as needed
+        String latencyFilePath = resourcePath + "/latency.txt"; // Update this path as needed
 
         // Start the tracking server
-        server = new TrackingServer(8081);
+        server = new TrackingServer(8080);
         new Thread(() -> server.start()).start();
 
 
 
         // Initialize peer nodes using the test resources directory
-        peerNode1 = new PeerNode(resourcePath + "/peer1", 8003, latencyFilePath);
+        peerNode1 = new PeerNode(resourcePath + "/peer1", 8001, latencyFilePath,"localhost",8080);
         peerNode1.initialize();
-        peerNode2 = new PeerNode(resourcePath + "/peer2", 8004, latencyFilePath);
+        peerNode2 = new PeerNode(resourcePath + "/peer2", 8002, latencyFilePath,"localhost",8080);
         peerNode2.initialize();
 
         // Start peer nodes in separate threads
@@ -45,25 +45,25 @@ public class TestFindAndUpdateFileList {
         new Thread(() -> peerNode1.start()).start();
         new Thread(() -> peerNode2.start()).start();
         // Allow time for the peer nodes to start
-        Thread.sleep(1000);
+//        Thread.sleep(1000);
 
     }
 
     @Test
     public void testFindAndUpdateFileList() throws InterruptedException {
         // Update file list to the tracking server
-        peerNode1.updateFileList("localhost", 8081);
-        peerNode2.updateFileList("localhost", 8081);
+        peerNode1.updateFileList();
+        peerNode2.updateFileList();
 
         // Allow time for the server to update the file list
         Thread.sleep(1000);
 
         // Test findFile
-        List<String> peerList = peerNode1.findFile("sample2.txt", "localhost", 8081);
+        List<String> peerList = peerNode1.findFile("sample2.txt");
         //make sure findFile returns the correct peer
         assertEquals(1, peerList.size());
         // Test find non-exist file
-        List<String> peerList2 = peerNode1.findFile("sample3.txt", "localhost", 8081);
+        List<String> peerList2 = peerNode2.findFile("sample3.txt");
         //make sure findFile returns the correct peer
         assertEquals(0, peerList2.size());
         // Test server update file list
@@ -72,7 +72,7 @@ public class TestFindAndUpdateFileList {
         // Make sure server has the correct file list
         assertEquals(2, server.getFileRegistry().size());
 
-        Thread.sleep(1000);
+//        Thread.sleep(1000);
     }
 
     @AfterEach

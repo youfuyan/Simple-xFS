@@ -29,7 +29,7 @@ public class TestChecksumAndCommunication {
             throw new RuntimeException("Test resources not found");
         }
         String resourcePath = resourceUrl.getPath();
-        String latencyFilePath = resourcePath + "/latency.csv"; // Update this path as needed
+        String latencyFilePath = resourcePath + "/latency.txt"; // Update this path as needed
 
         // Start the tracking server
         server = new TrackingServer(8080);
@@ -39,31 +39,31 @@ public class TestChecksumAndCommunication {
         Thread.sleep(1000);
 
         // Initialize peer nodes using the test resources directory
-        peerNode1 = new PeerNode(resourcePath + "/peer1", 8001, latencyFilePath);
+        peerNode1 = new PeerNode(resourcePath + "/peer1", 8001, latencyFilePath,"localhost",8080);
         peerNode1.initialize();
-        peerNode2 = new PeerNode(resourcePath + "/peer2", 8002, latencyFilePath);
+        peerNode2 = new PeerNode(resourcePath + "/peer2", 8002, latencyFilePath,"localhost",8080);
         peerNode2.initialize();
 
         // Start peer nodes in separate threads
 
         new Thread(() -> peerNode1.start()).start();
         new Thread(() -> peerNode2.start()).start();
-        Thread.sleep(1000);
+//        Thread.sleep(1000);
 
     }
 
     @Test
     public void testChecksumAndCommunication() throws Exception {
         // Update file list to the tracking server
-        peerNode1.updateFileList("localhost", 8080);
-        peerNode2.updateFileList("localhost", 8080);
+        peerNode1.updateFileList();
+        peerNode2.updateFileList();
 
         // Allow time for the server to update the file list
         Thread.sleep(1000);
 
         // Test findFile
-        List<String> peerList1 = peerNode1.findFile("sample1.txt", "localhost", 8080);
-        List<String> peerList2 = peerNode1.findFile("sample2.txt", "localhost", 8080);
+        List<String> peerList1 = peerNode1.findFile("sample1.txt");
+        List<String> peerList2 = peerNode1.findFile("sample2.txt");
 
         // Verify that only peerNode1 has "sample1.txt" and only peerNode2 has "sample2.txt"
         assertEquals(1, peerList1.size());

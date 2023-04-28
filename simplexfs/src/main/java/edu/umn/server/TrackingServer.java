@@ -15,8 +15,8 @@ import java.util.List;
 
 
 public class TrackingServer {
-    private int port;
-    private Map<String, FileInfo> fileRegistry;
+    private final int port;
+    private final Map<String, FileInfo> fileRegistry;
 
     private ServerSocket serverSocket;
 
@@ -33,26 +33,48 @@ public class TrackingServer {
     }
 
     private static class FileInfo {
-        private String checksum;
-        private Map<String, PeerInfo> peers;
+        private final String checksum;
+        private final Map<String, PeerInfo> peers;
 
         public FileInfo(String checksum) {
             this.checksum = checksum;
             this.peers = new HashMap<>();
         }
+        @Override
+        public String toString() {
+            return "FileInfo{" +
+                    "checksum='" + checksum + '\'' +
+                    ", peers=" + peers +
+                    '}';
+        }
     }
 
     private static class PeerInfo {
-        private String ipAddress;
-        private int port;
+        private final String ipAddress;
+        private final int port;
 
 
         public PeerInfo(String ipAddress, int port) {
             this.ipAddress = ipAddress;
             this.port = port;
         }
+        @Override
+        public String toString() {
+            return "PeerInfo{" +
+                    "ipAddress='" + ipAddress + '\'' +
+                    ", port=" + port +
+                    '}';
+        }
     }
-    public void start() {
+
+    public void printFileRegistry() {
+        System.out.println("Updated file registry:");
+        for (Map.Entry<String, FileInfo> entry : fileRegistry.entrySet()) {
+            System.out.println("  " + entry.getKey() + ": " + entry.getValue());
+        }
+    }
+
+    public synchronized void start() {
         running = true;
         System.out.println("Starting server on port " + port);
         try (ServerSocket serverSocket = new ServerSocket(port)) {
@@ -70,10 +92,15 @@ public class TrackingServer {
                             List<String> peerList = find(filename);
                             outputStream.writeObject(peerList);
                         } else if ("UPDATE_LIST".equals(requestType)) {
+                            int peerPort = inputStream.readInt();
                             @SuppressWarnings("unchecked")
                             Map<String, String> fileList = (HashMap<String, String>) inputStream.readObject();
                             // Handle the received file list (peer IP address and port can be obtained from the socket)
-                            receiveFileList(socket.getInetAddress().getHostAddress(), socket.getPort(), fileList);
+                            receiveFileList(socket.getInetAddress().getHostAddress(), peerPort, fileList);
+
+                        } else {
+                            // Unknown request type
+                            System.out.println("Unknown request type: " + requestType);
                         }
                     } catch (IOException | ClassNotFoundException e) {
                         e.printStackTrace();
@@ -102,8 +129,8 @@ public class TrackingServer {
         if (fileInfo != null) {
             List<String> peerList = new ArrayList<>();
             for (PeerInfo peerInfo : fileInfo.peers.values()) {
-                String peerAddress = peerInfo.ipAddress + ":" + peerInfo.port;
-                peerList.add(peerAddress);
+                String peerIpPortCheckSum = peerInfo.ipAddress + ":" + peerInfo.port + ":" + fileInfo.checksum;
+                peerList.add(peerIpPortCheckSum);
             }
             return peerList;
         }
@@ -124,7 +151,7 @@ public class TrackingServer {
                 fileInfo = new FileInfo(checksum);
                 fileRegistry.put(filename, fileInfo);
             }
-            fileInfo.peers.put(peerInfo.ipAddress, peerInfo);
+            fileInfo.peers.put(peerInfo.ipAddress + ":" + port, peerInfo);
         }
 
         // Debug: Print the updated fileRegistry

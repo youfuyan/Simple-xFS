@@ -44,7 +44,7 @@
                         <printSummary>true</printSummary>
                         <skipTests>false</skipTests>
                         <skip>false</skip>
-                        <outputDirectory>${project.build.directory}/surefire-reports</outputDirectory>
+
                         <reportFormat>plain</reportFormat>
                         <useSystemClassLoader>false</useSystemClassLoader>
                     </configuration>
