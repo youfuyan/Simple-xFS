@@ -95,6 +95,12 @@ Make sure to test edge cases, such as all available peers being down and failing
 * Peer Crashes: In the case of a sender node going down, the receiver node will try to download from another node. There is a maximum number of retries that be applied to this operation.
 * Handling Special Cases: In situations where all available peers are down or a file is not found on any peer, the system will return a "file not found" message to the client. there Is other information that the client should receive in this case, if all avaliable peers down, it will return "all peers are offline", if a file not found on any peer, it will return "file not found" and plus the tried peers list
 
+#### Peer selection algorithm
+
+1. For each peer in the list, call the `getLoad()` method to determine the current load of the peer.
+2. Calculate a weighted score for each peer using a combination of load and latency. For example, you can use the formula `score = (1 - loadWeight) * latency + loadWeight * load`, where `loadWeight` is a value between 0 and 1 that determines the importance of load in the score calculation. You can adjust this value to prioritize either load or latency.
+3. Select the peer with the lowest score as the best peer for downloading the file.
+
 ### Adds on:
 
 1. set up JDK version to 11(macOS)
