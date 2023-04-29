@@ -76,12 +76,13 @@ public class debug {
         System.out.println(peerPort);
         peerNode1.downloadFile("sample2.txt", peerIpAddress, peerPort);
         //using peerList2 to download sample4.txt from peerList2.get(0)
+        peerNode1.updateFileList();
         String peerIpAddress2 = peerList2.get(0).split(":")[0];
         System.out.println(peerIpAddress2);
         int peerPort2 = Integer.parseInt(peerList2.get(0).split(":")[1]);
         System.out.println(peerPort2);
         peerNode2.downloadFile("test10Mb.db", peerIpAddress2, peerPort2);
-
+        peerNode2.updateFileList();
         // Allow time for the file transfer to complete
         Thread.sleep(1000);
         //check the file in peer1
@@ -98,6 +99,28 @@ public class debug {
         } else {
             System.out.println("test10Mb.db in peer1 is not the same as test10Mb.db in peer2");
         }
+        //peer 3 try to download sample1.txt from peer1 and peer2
+        //peer 3 should download sample1.txt from peer1 because peer1 has the lowest latency
+        List<String> peerList3 = peerNode3.findFile("sample1.txt");
+        double loadWeight = 0.5;
+        peerNode3.downloadFile("sample1.txt", peerList3, loadWeight);
+        // Allow time for the file transfer to complete
+        Thread.sleep(1000);
+        //check terminal output to see which peer is chosen
+
+        //peer 4 and peer 5 download test10Mb.db from peer1, peer2
+        //peer 4 should download test10Mb.db from peer1
+        List<String> peerList4 = peerNode4.findFile("test10Mb.db");
+        double loadWeight2 = 0.5;
+        peerNode4.downloadFile("test10Mb.db", peerList4, loadWeight2);
+        //peer 5 should download test10Mb.db from peer2
+        List<String> peerList5 = peerNode5.findFile("test10Mb.db");
+        System.out.println("peerList5: " + peerList5);
+        double loadWeight3 = 0.5;
+        peerNode5.downloadFile("test10Mb.db", peerList5, loadWeight3);
+        // Allow time for the file transfer to complete
+        Thread.sleep(1000);
+
 
         // Stop the peer nodes
         peerNode1.stop();

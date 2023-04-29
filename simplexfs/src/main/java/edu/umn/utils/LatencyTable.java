@@ -39,32 +39,27 @@ public class LatencyTable {
     }
 
     // Add or update latency between current peer and another peer
-    public synchronized void addOrUpdateLatency(String peerIpAddress, int latency) {
-        latencyMap.put(peerIpAddress, latency);
+    public synchronized void addOrUpdateLatency(int node1, int node2, int latency) {
+        String key = node1 + "-" + node2;
+        latencyMap.put(key, latency);
+        latencyMap.put(node2 + "-" + node1, latency);
     }
 
+
     // Get latency between two ports
-    public synchronized int getLatency(int port1, int port2) {
-        return latencyMap.getOrDefault(port1 + "-" + port2, Integer.MAX_VALUE);
+    public synchronized int getLatency(int node1, int node2) {
+        String key = node1 + "-" + node2;
+        return latencyMap.getOrDefault(key, Integer.MAX_VALUE);
     }
 
     // Remove latency entry for a peer
-    public synchronized void removeLatency(String peerIpAddress) {
-        latencyMap.remove(peerIpAddress);
+    public synchronized void removeLatency(int node1, int node2) {
+        String key = node1 + "-" + node2;
+        latencyMap.remove(key);
+        latencyMap.remove(node2 + "-" + node1);
     }
 
-    // Get the peer with the lowest latency
-    public synchronized String getPeerWithLowestLatency() {
-        String lowestLatencyPeer = null;
-        int minLatency = Integer.MAX_VALUE;
-        for (Map.Entry<String, Integer> entry : latencyMap.entrySet()) {
-            if (entry.getValue() < minLatency) {
-                minLatency = entry.getValue();
-                lowestLatencyPeer = entry.getKey();
-            }
-        }
-        return lowestLatencyPeer;
-    }
+
 
     // Generate a fake latency file with random latency values between [100-5000] ms for each pair of ports
     public static void generateFakeLatencyFile(String latencyFilePath, int startPort, int endPort, int seed) {

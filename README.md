@@ -91,7 +91,7 @@ Make sure to test edge cases, such as all available peers being down and failing
 - Implements mechanisms for retries, timeouts, and handling checksum mismatches.
 
 * File Corruption: If a downloaded file is corrupted (detected by checksum mismatch), the system should automatically re-fetch the file from that peer a specific number of times before trying another peer.
-* Tracking Server Crashes: Handle tracking server crashes using soft state. The server should recover file sharing information from the peers when it comes back online. When the server recovers from a crash, it sends a SEND_INFO request to all the peers. It is expected that the peers will respond in a timely manner, after a specific time, the server should have a timeout mechanism. Peers should be blocked waiting for the server to come back up or serve files to other peers if they cached file location information earlier.
+* Tracking Server Crashes: Handle tracking server crashes using soft state. The server should recover file sharing information from the peers when it comes back online. When the server recovers from a crash, it sends a  RECOVER_SERVER request to all the peers. It is expected that the peers will respond in a timely manner, after a specific time, the server should have a timeout mechanism. Allow peers to continue sharing files with each other if they have cached file location information
 * Peer Crashes: In the case of a sender node going down, the receiver node will try to download from another node. There is a maximum number of retries that be applied to this operation.
 * Handling Special Cases: In situations where all available peers are down or a file is not found on any peer, the system will return a "file not found" message to the client. there Is other information that the client should receive in this case, if all avaliable peers down, it will return "all peers are offline", if a file not found on any peer, it will return "file not found" and plus the tried peers list
 
@@ -107,7 +107,7 @@ Make sure to test edge cases, such as all available peers being down and failing
 
    ```bash
    export JAVA_HOME=`/usr/libexec/java_home -v 11`
-
+   
    ```
 
 (Linux CSE lab machine)
@@ -116,10 +116,18 @@ Make sure to test edge cases, such as all available peers being down and failing
 export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ```
 
-2. check maven version
+2. check Maven version
 
    ```bash
    mvn -version
    ```
 
-To see if the java version is 11.0.18 and mvn is 3.6.3.
+Double check  if the java version is **11.0.18** and Maven is **3.6.3**. (Linux CSE lab machine's default JDK is 17 which is not compatible with Maven 3.6.3, see bug reported:https://bugs.launchpad.net/ubuntu/+source/maven/+bug/1930541)
+
+3. run debug class
+
+   ```bash
+    mvn exec:java -Dexec.mainClass="edu.umn.debug" 
+   ```
+
+   

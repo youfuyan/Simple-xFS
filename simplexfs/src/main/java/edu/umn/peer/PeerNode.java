@@ -10,10 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +42,6 @@ public class PeerNode {
         this.port = port;
         this.fileChecksums = new HashMap<>();
         this.latencyTable = new LatencyTable(latencyFilePath);
-        // Create a ServerInfo object for the tracking server
         this.trackingServer = new ServerInfo(trackingServerIp, trackingServerPort);
         this.loadIndex = new AtomicInteger(0);
         this.executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
@@ -163,6 +159,10 @@ public class PeerNode {
             } else if ("GET_LOAD".equals(requestType)) {
                 // Handle GET_LOAD request from other peers
                 handleLoadRequest(outputStream);
+            } else if ("RECOVER_SERVER".equals(requestType)) {
+                // Send file list back to the server
+                // Use a similar method as in your peer code to send the file list to the server
+                handleRecoverServerRequest(outputStream);
             } else {
                 // Unknown request type
                 System.out.println("Unknown request type: " + requestType);
@@ -171,6 +171,14 @@ public class PeerNode {
             e.printStackTrace();
         }
     }
+    private void handleRecoverServerRequest(ObjectOutputStream outputStream) throws IOException {
+        outputStream.writeObject("RECOVER_SERVER_RESPONSE");
+        // Send the file list to the server
+        outputStream.writeObject(fileChecksums.keySet());
+        // Send current port to the server
+        outputStream.writeInt(port);
+    }
+
     private void handleLoadRequest(ObjectOutputStream outputStream) throws IOException {
         // Send the current load index to the requesting peer
         outputStream.writeInt(getLoad());
@@ -204,17 +212,46 @@ public class PeerNode {
             e.printStackTrace();
         }
     }
-    public void downloadFile(String filename, List<String> peerList, double loadWeight) {
-        String bestPeer = selectBestPeer(peerList, loadWeight);
-        if (bestPeer != null) {
-            String[] parts = bestPeer.split(":");
-            String ipAddress = parts[0];
-            int port = Integer.parseInt(parts[1]);
-            downloadFile(filename, ipAddress, port);
+
+public void downloadFile(String filename, List<String> peerList, double loadWeight) {
+    String bestPeer = selectBestPeer(peerList, loadWeight);
+    int retryCount = 0;
+    boolean successfulDownload = false;
+
+    while (bestPeer != null && !successfulDownload && retryCount < MAX_RETRIES) {
+        String[] parts = bestPeer.split(":");
+        String ipAddress = parts[0];
+        int port = Integer.parseInt(parts[1]);
+
+        downloadFile(filename, ipAddress, port);
+        String computedChecksum = computeChecksum(new File(fileDirectory, filename).toPath());
+        String originalChecksum = findFile(filename).get(0).split(":")[2];
+
+        if (!computedChecksum.equals(originalChecksum)) {
+            retryCount++;
         } else {
-            System.out.println("No suitable peer found for downloading the file.");
+            successfulDownload = true;
+        }
+
+        if (!successfulDownload && retryCount == MAX_RETRIES) {
+            peerList.remove(bestPeer);
+            bestPeer = selectBestPeer(peerList, loadWeight);
+            retryCount = 0;
         }
     }
+    if (successfulDownload) {
+        System.out.println("File download successful.");
+        System.out.println("File downloaded from: " + bestPeer);
+        // Update the file list and inform the tracking server
+        fileChecksums.put(filename, computeChecksum(new File(fileDirectory, filename).toPath()));
+        updateFileList();
+
+    } else {
+        System.out.println("File download failed after trying all available peers.");
+    }
+
+
+}
 
 
 
@@ -304,22 +341,6 @@ public class PeerNode {
     }
 
 
-
-//    public void updateFileList() {
-//        // Updates the list of files stored in the specific directory and sends the updated list to the tracking server
-//        try (Socket socket = new Socket(trackingServer.ipAddress, trackingServer.port);
-//             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
-//
-//            // Send request
-//            outputStream.writeObject("UPDATE_LIST");
-//            outputStream.writeInt(port);
-//            outputStream.writeObject(fileChecksums);
-//
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-
     public void updateFileList() {
         // Updates the list of files stored in the specific directory and sends the updated list to the tracking server
         try (Socket socket = new Socket(trackingServer.ipAddress, trackingServer.port);
@@ -363,6 +384,7 @@ public class PeerNode {
     public String selectBestPeer(List<String> peerList, double loadWeight) {
         String bestPeer = null;
         double bestScore = Double.MAX_VALUE;
+        int failedConnections = 0;
 
         for (String peer : peerList) {
             String[] parts = peer.split(":");
@@ -370,8 +392,13 @@ public class PeerNode {
             int port = Integer.parseInt(parts[1]);
 
             int load = getRemotePeerLoad(ipAddress, port); // Retrieve the load from the remote peer
+            if (load == -1) {
+                failedConnections++;
+                continue; // Skip this peer
+            }
             int latency = latencyTable.getLatency(this.port, port);
-
+            // print out the latency
+            System.out.println("Latency: " + latency + "ms");
             double score = (1 - loadWeight) * latency + loadWeight * load;
 
             if (score < bestScore) {
@@ -380,8 +407,14 @@ public class PeerNode {
             }
         }
 
+        if (failedConnections == peerList.size()) {
+            System.out.println("All peers are offline.");
+            return null;
+        }
+
         return bestPeer;
     }
+
 
 
 
