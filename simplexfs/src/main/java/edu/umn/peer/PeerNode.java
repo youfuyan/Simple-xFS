@@ -16,6 +16,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static edu.umn.utils.Checksum.computeChecksum;
+
 public class PeerNode {
     private final String fileDirectory;
     private final int port;
@@ -67,13 +69,24 @@ public class PeerNode {
         return fileChecksums;
     }
 
+    public List<String> listFiles() {
+        // Returns a new ArrayList containing the keys in the fileChecksums map
+        return new ArrayList<>(fileChecksums.keySet());
+    }
+
+
     public void initialize() {
         // Scan the file directory and compute checksums
         try {
             Files.walk(Path.of(fileDirectory))
                     .filter(Files::isRegularFile)
                     .forEach(filePath -> {
-                        String checksum = computeChecksum(filePath);
+                        String checksum = null;
+                        try {
+                            checksum = computeChecksum(filePath);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
                         if (checksum != null) {
                             fileChecksums.put(filePath.getFileName().toString(), checksum);
                         }
@@ -87,27 +100,6 @@ public class PeerNode {
         System.out.println("File names: " + fileChecksums.keySet());
     }
 
-
-    private String computeChecksum(Path filePath) {
-        try {
-            byte[] fileBytes = Files.readAllBytes(filePath);
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] checksum = md.digest(fileBytes);
-            return bytesToHex(checksum);
-
-        } catch (IOException | NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02x", b));
-        }
-        return sb.toString();
-    }
 
     public void start() {
         System.out.println("Starting peer node on port " + port);
@@ -127,6 +119,8 @@ public class PeerNode {
                 }
             }
         } catch (IOException e) {
+
+            System.out.println("Exception while starting server: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -148,7 +142,7 @@ public class PeerNode {
     }
 
 
-    private void handleConnection(Socket socket) {
+    private synchronized void handleConnection(Socket socket) {
         try (ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
              ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
 
@@ -161,8 +155,7 @@ public class PeerNode {
                 handleLoadRequest(outputStream);
             } else if ("RECOVER_SERVER".equals(requestType)) {
                 // Send file list back to the server
-                // Use a similar method as in your peer code to send the file list to the server
-                handleRecoverServerRequest(outputStream);
+                handleRecoverServerRequest(outputStream, inputStream);
             } else {
                 // Unknown request type
                 System.out.println("Unknown request type: " + requestType);
@@ -171,12 +164,12 @@ public class PeerNode {
             e.printStackTrace();
         }
     }
-    private void handleRecoverServerRequest(ObjectOutputStream outputStream) throws IOException {
+    private void handleRecoverServerRequest(ObjectOutputStream outputStream, ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
+        // Send request
         outputStream.writeObject("RECOVER_SERVER_RESPONSE");
-        // Send the file list to the server
-        outputStream.writeObject(fileChecksums.keySet());
-        // Send current port to the server
         outputStream.writeInt(port);
+        outputStream.writeObject(fileChecksums);
+        outputStream.flush();
     }
 
     private void handleLoadRequest(ObjectOutputStream outputStream) throws IOException {
@@ -224,7 +217,12 @@ public void downloadFile(String filename, List<String> peerList, double loadWeig
         int port = Integer.parseInt(parts[1]);
 
         downloadFile(filename, ipAddress, port);
-        String computedChecksum = computeChecksum(new File(fileDirectory, filename).toPath());
+        String computedChecksum = null;
+        try {
+            computedChecksum = computeChecksum(new File(fileDirectory, filename).toPath());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         String originalChecksum = findFile(filename).get(0).split(":")[2];
 
         if (!computedChecksum.equals(originalChecksum)) {
@@ -243,7 +241,11 @@ public void downloadFile(String filename, List<String> peerList, double loadWeig
         System.out.println("File download successful.");
         System.out.println("File downloaded from: " + bestPeer);
         // Update the file list and inform the tracking server
-        fileChecksums.put(filename, computeChecksum(new File(fileDirectory, filename).toPath()));
+        try {
+            fileChecksums.put(filename, computeChecksum(new File(fileDirectory, filename).toPath()));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         updateFileList();
 
     } else {
@@ -274,21 +276,38 @@ public void downloadFile(String filename, List<String> peerList, double loadWeig
     }
 
     private void receiveFile(String filename, Socket socket) throws IOException {
-        File file = new File(fileDirectory, filename);
         byte[] buffer = new byte[BUFFER_SIZE];
+        File file = new File(fileDirectory, filename);
+        OutputStream fos = null;
+        BufferedOutputStream bos = null;
+
         try (InputStream is = socket.getInputStream();
-             BufferedInputStream bis = new BufferedInputStream(is);
-             OutputStream fos = new FileOutputStream(file);
-             BufferedOutputStream bos = new BufferedOutputStream(fos)) {
+             BufferedInputStream bis = new BufferedInputStream(is)) {
 
             int bytesRead;
             while ((bytesRead = bis.read(buffer)) > 0) {
+                if (fos == null) {
+                    fos = new FileOutputStream(file);
+                    bos = new BufferedOutputStream(fos);
+                }
                 bos.write(buffer, 0, bytesRead);
+            }
+        } finally {
+            if (bos != null) {
+                bos.close();
+            }
+            if (fos != null) {
+                fos.close();
             }
         }
 
         // Verify the checksum of the received file
-        String computedChecksum = computeChecksum(file.toPath());
+        String computedChecksum = null;
+        try {
+            computedChecksum = computeChecksum(file.toPath());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         System.out.println("Computed checksum: " + computedChecksum);
         // Get the original checksum from the tracking server
 
@@ -301,7 +320,11 @@ public void downloadFile(String filename, List<String> peerList, double loadWeig
             boolean successfulVerification = false;
 
             while (retryCount < MAX_RETRIES && !successfulVerification) {
-                computedChecksum = computeChecksum(file.toPath());
+                try {
+                    computedChecksum = computeChecksum(file.toPath());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
                 successfulVerification = computedChecksum.equals(originalChecksum);
                 retryCount++;
             }
@@ -328,6 +351,7 @@ public void downloadFile(String filename, List<String> peerList, double loadWeig
             return peerList;
 
         } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error: Unable to find file. Please try again.");
             e.printStackTrace();
         }
         return new ArrayList<>();

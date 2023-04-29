@@ -19,7 +19,7 @@ public class LatencyTable {
 
 
 
-    private void readLatencyFile(String latencyFilePath) {
+    public void readLatencyFile(String latencyFilePath) {
         try (BufferedReader br = new BufferedReader(new FileReader(latencyFilePath))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -77,6 +77,10 @@ public class LatencyTable {
         }
     }
 
+    public Map<String, Integer> getLatencyMap() {
+        return latencyMap;
+    }
+
     public static void main(String[] args) {
         //save file to src/main/resources/latency.txt
         String latencyFilePath = "src/main/resources/files/latency.txt";
@@ -87,7 +91,7 @@ public class LatencyTable {
         //create a latency table
         LatencyTable latencyTable = new LatencyTable(latencyFilePath);
         //print latency table
-        System.out.println(latencyTable.latencyMap);
+        System.out.println(latencyTable.getLatencyMap());
     }
 }
 

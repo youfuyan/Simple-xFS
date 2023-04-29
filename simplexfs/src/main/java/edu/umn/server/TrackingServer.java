@@ -40,9 +40,9 @@ public class TrackingServer {
         return fileRegistry;
     }
 
-    private static class FileInfo {
-        private final String checksum;
-        private final Map<String, PeerInfo> peers;
+    public static class FileInfo {
+        public final String checksum;
+        public final Map<String, PeerInfo> peers;
 
         public FileInfo(String checksum) {
             this.checksum = checksum;
@@ -57,7 +57,7 @@ public class TrackingServer {
         }
     }
 
-    private static class PeerInfo {
+    public static class PeerInfo {
         private final String ipAddress;
         private final int port;
 
@@ -73,6 +73,13 @@ public class TrackingServer {
                     ", port=" + port +
                     '}';
         }
+
+        public int getPort() {
+            return port;
+        }
+        public String getIpAddress() {
+            return ipAddress;
+        }
     }
 
     public void printFileRegistry() {
@@ -86,11 +93,13 @@ public class TrackingServer {
     public synchronized void start() {
         running = true;
         System.out.println("Starting server on port " + port);
-        if (!knownPeers.isEmpty()) {
-            recoverServer();
-        }
+
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             this.serverSocket = serverSocket; // Store the reference to the server socket
+            // Start to recover server if it recovers from a crash and has known peers
+            if (!knownPeers.isEmpty()) {
+                recoverServer();
+            }
             while (running) {
 
                 try {
@@ -116,7 +125,6 @@ public class TrackingServer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        // after server recovery, broadcast to all known peers to recover server fileRegistry
 
     }
 
@@ -140,7 +148,7 @@ public class TrackingServer {
                 // Handle the received file list (peer IP address and port can be obtained from the socket)
                 receiveFileList(socket.getInetAddress().getHostAddress(), peerPort, fileList);
                 // Send response to the client
-                outputStream.writeObject("UPDATE_LIST_SUCCESS");
+                outputStream.writeObject("UPDATE_LIST_SUCCESS" + ":" + peerPort);
 
             } else if ("RECOVER_SERVER_RESPONSE".equals(requestType)) {
                 int peerPort = inputStream.readInt();
@@ -148,6 +156,7 @@ public class TrackingServer {
                 Map<String, String> fileList = (HashMap<String, String>) inputStream.readObject();
                 // Handle the received file list (peer IP address and port can be obtained from the socket)
                 receiveFileList(socket.getInetAddress().getHostAddress(), peerPort, fileList);
+                outputStream.writeObject("RECOVER_LIST_SUCCESS");
                 // Mark the peer as having sent its file list
                 peerInfoReceived.add(socket.getInetAddress().getHostAddress() + ":" + peerPort);
             } else {
@@ -238,12 +247,26 @@ public class TrackingServer {
             String[] addressParts = peerAddress.split(":");
             String ipAddress = addressParts[0];
             int port = Integer.parseInt(addressParts[1]);
-            System.out.println("Sending UPDATE_LIST request to " + peerAddress);
+            System.out.println("Sending RECOVER_SERVER request to " + peerAddress);
             // Send RECOVER_SERVER request to the peer
             try (Socket socket = new Socket(ipAddress, port);
-                 ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream())) {
+                 ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+                 ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream())) {
+
                 outputStream.writeObject("RECOVER_SERVER");
-            } catch (IOException e) {
+                String response = (String) inputStream.readObject();
+                int peerPort = inputStream.readInt();
+                Map<String, String> receivedFileChecksums = (Map<String, String>) inputStream.readObject();
+                if ("RECOVER_SERVER_RESPONSE".equals(response)) {
+                    // Handle received data
+                    receiveFileList(ipAddress, peerPort, receivedFileChecksums);
+
+                    // Send the success message back
+                    outputStream.writeObject("RECOVER_LIST_SUCCESS");
+                    peerInfoReceived.add(peerAddress);
+                }
+
+            } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
             timeoutExecutor.schedule(() -> {
@@ -270,8 +293,10 @@ public class TrackingServer {
     }
 
     public static void main(String[] args) {
-        TrackingServer trackingServer = new TrackingServer(8080);
-        trackingServer.start();
-
+        // if no arguments are provided, start the server on port 8080, else use the provided port
+        int port = args.length == 0 ? 8080 : Integer.parseInt(args[0]);
+        TrackingServer trackingServer = new TrackingServer(port);
+        // Start the tracking server in a separate thread
+        new Thread(trackingServer::start).start();
     }
 }

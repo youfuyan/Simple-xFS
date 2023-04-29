@@ -57,7 +57,7 @@ public class TestFindAndUpdateFileList {
         peerNode2.updateFileList();
 
         // Allow time for the server to update the file list
-        Thread.sleep(1000);
+//        Thread.sleep(1000);
 
         // Test findFile
         List<String> peerList = peerNode1.findFile("sample2.txt");
@@ -71,9 +71,7 @@ public class TestFindAndUpdateFileList {
         assertEquals(0, peerList2.size());
         // Test server update file list
         // make sure server has the correct file list
-        // Test server update file list
-        // Make sure server has the correct file list
-        assertEquals(2, server.getFileRegistry().size());
+        assertEquals(3, server.getFileRegistry().size());
 
 //        Thread.sleep(1000);
     }

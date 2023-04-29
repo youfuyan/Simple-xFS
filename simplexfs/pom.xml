@@ -49,8 +49,32 @@
                         <useSystemClassLoader>false</useSystemClassLoader>
                     </configuration>
                 </plugin>
-
-
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <mainClass>edu.umn.peer.PeerNodeCLI</mainClass>
+                    <arguments>
+                        <argument>${peerId}</argument>
+                        <argument>${peerPort}</argument>
+                        <argument>${trackingServerIp}</argument>
+                        <argument>${trackingServerPort}</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.0</version>  <!-- Adjust version as necessary -->
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>edu.umn.peer.PeerNodeCLI</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
