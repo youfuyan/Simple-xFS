@@ -146,7 +146,7 @@ The project is built using Maven 3.6.3 and Java 11(both installed in CSE lab mac
 
 Here is the instruction of run `java` class through a terminal.
 
-Navigate to the directory containing the compiled `.class` files. In your case, this would be the `simplexfs/target/classe` directory.
+Navigate to the directory containing the compiled `.class` files, which would be the `simplexfs/target/classe` directory.
 
 ```
 cd target/classes
@@ -175,6 +175,12 @@ Starting server on port 8081
 ```
 
 ### 4.2 How to run `PeerNode CLI`:
+
+**Note**: If you opened another terminal after running server, please make sure you change the Java version to `11` again!
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+```
 
 **Note:** Before running the peer node client, please make sure the `latency.txt` file is in the same folder as the complied class files. The `latency.txt` file is located at `simplxfs/target/classes/files/lantency.txt`. And the `peer1` folder is located at `simplxfs/target/classes/files/peer1`.
 
