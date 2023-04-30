@@ -9,10 +9,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.List;
-public class debug {
+public class SimulateBasicOperation {
     public static void main(String[] args) throws Exception {
         // Get the path to the test resources directory
-        URL resourceUrl = debug.class.getClassLoader().getResource("files");
+        URL resourceUrl = SimulateBasicOperation.class.getClassLoader().getResource("files");
         System.out.println(resourceUrl);
         if (resourceUrl == null) {
             throw new RuntimeException("Test resources not found");

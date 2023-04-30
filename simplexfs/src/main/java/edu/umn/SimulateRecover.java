@@ -7,13 +7,11 @@ import edu.umn.server.TrackingServer;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.util.List;
 
-public class DebugRecover {
+public class SimulateRecover {
     public static void main(String[] args) {
         // Get the path to the test resources directory
-        URL resourceUrl = debug.class.getClassLoader().getResource("files");
+        URL resourceUrl = SimulateBasicOperation.class.getClassLoader().getResource("files");
         System.out.println(resourceUrl);
         if (resourceUrl == null) {
             throw new RuntimeException("Test resources not found");
@@ -74,11 +72,16 @@ public class DebugRecover {
         //check fileRegistry in server
         server.printFileRegistry();
 
-
+        //remove the new file
+        try {
+            Files.delete(filePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
        //stop
         peerNode1.stop();
         peerNode2.stop();
-        server.stop();
 
+        server.stop();
     }
 }

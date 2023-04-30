@@ -65,6 +65,12 @@ public class PeerNode {
                     '}';
         }
     }
+
+    public void updateLatencyTable(int peerPort, int latency) {
+        latencyTable.addOrUpdateLatency(this.port, peerPort, latency);
+    }
+
+
     public Map<String, String> getFileChecksums() {
         return fileChecksums;
     }
@@ -149,7 +155,9 @@ public class PeerNode {
             String requestType = (String) inputStream.readObject();
             if ("DOWNLOAD".equals(requestType)) {
                 // Handle DOWNLOAD request from other peers
+                loadIndex.incrementAndGet(); // Increment the load index
                 handleFileDownloadRequest(inputStream, outputStream, socket);
+                loadIndex.decrementAndGet(); // Decrement the load index
             } else if ("GET_LOAD".equals(requestType)) {
                 // Handle GET_LOAD request from other peers
                 handleLoadRequest(outputStream);
@@ -179,9 +187,9 @@ public class PeerNode {
     private void handleFileDownloadRequest(ObjectInputStream inputStream, ObjectOutputStream outputStream, Socket socket) throws IOException {
         try {
             String filename = (String) inputStream.readObject();
-            loadIndex.incrementAndGet(); // Increment the load index
+//            loadIndex.incrementAndGet(); // Increment the load index
             sendFile(filename, socket);
-            loadIndex.decrementAndGet(); // Decrement the load index
+//            loadIndex.decrementAndGet(); // Decrement the load index
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -191,6 +199,7 @@ public class PeerNode {
         try (Socket socket = new Socket(peerIpAddress, peerPort);
              ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream())) {
+
 
             // Send download request
             outputStream.writeObject("DOWNLOAD");
@@ -206,7 +215,7 @@ public class PeerNode {
         }
     }
 
-public void downloadFile(String filename, List<String> peerList, double loadWeight) {
+public String downloadFile(String filename, List<String> peerList, double loadWeight) {
     String bestPeer = selectBestPeer(peerList, loadWeight);
     int retryCount = 0;
     boolean successfulDownload = false;
@@ -217,6 +226,7 @@ public void downloadFile(String filename, List<String> peerList, double loadWeig
         int port = Integer.parseInt(parts[1]);
 
         downloadFile(filename, ipAddress, port);
+
         String computedChecksum = null;
         try {
             computedChecksum = computeChecksum(new File(fileDirectory, filename).toPath());
@@ -240,6 +250,7 @@ public void downloadFile(String filename, List<String> peerList, double loadWeig
     if (successfulDownload) {
         System.out.println("File download successful.");
         System.out.println("File downloaded from: " + bestPeer);
+
         // Update the file list and inform the tracking server
         try {
             fileChecksums.put(filename, computeChecksum(new File(fileDirectory, filename).toPath()));
@@ -252,7 +263,7 @@ public void downloadFile(String filename, List<String> peerList, double loadWeig
         System.out.println("File download failed after trying all available peers.");
     }
 
-
+    return bestPeer;
 }
 
 
@@ -414,7 +425,12 @@ public void downloadFile(String filename, List<String> peerList, double loadWeig
             String[] parts = peer.split(":");
             String ipAddress = parts[0];
             int port = Integer.parseInt(parts[1]);
-
+            // Skip this peer if it is the current peer
+            if (ipAddress.equals("127.0.0.1") && port == this.port) {
+                continue;
+            }
+            // Get the load of the remote peer
+            System.out.println("Getting load from peer " + ipAddress + ":" + port);
             int load = getRemotePeerLoad(ipAddress, port); // Retrieve the load from the remote peer
             if (load == -1) {
                 failedConnections++;

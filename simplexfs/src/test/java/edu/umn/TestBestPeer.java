@@ -143,6 +143,9 @@ public class TestBestPeer {
         // Stop the peer nodes
         peerNode1.stop();
         peerNode2.stop();
+        peerNode3.stop();
+        peerNode4.stop();
+        peerNode5.stop();
         // Stop the tracking server
         server.stop();
         Thread.sleep(1000);

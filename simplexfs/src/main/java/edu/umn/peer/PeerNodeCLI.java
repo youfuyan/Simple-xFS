@@ -35,7 +35,14 @@ public class PeerNodeCLI {
             e.printStackTrace();
         }
         peerNode.updateFileList();
+        //Provide a CLI for the user to interact with the peer node
+        System.out.println("Welcome to the simple xFS peer node CLI.");
+        System.out.println("Operations: ");
+        System.out.println("  list: list files in this peer");
+        System.out.println("  download <filename>: download a file");
+        System.out.println("  exit: exit the program");
         while (true) {
+
             System.out.println("Enter a command:");
             String command = scanner.nextLine();
 
@@ -59,6 +66,10 @@ public class PeerNodeCLI {
                 }
             } else {
                 System.out.println("Unknown command: " + command);
+                System.out.println("Operations: ");
+                System.out.println("  list: list files in this peer");
+                System.out.println("  download <filename>: download a file");
+                System.out.println("  exit: exit the program");
             }
         }
     }
