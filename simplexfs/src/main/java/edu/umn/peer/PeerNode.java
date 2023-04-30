@@ -8,8 +8,6 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -25,18 +23,10 @@ public class PeerNode {
     private final LatencyTable latencyTable;
     private final AtomicInteger loadIndex;
     private final ThreadPoolExecutor executor;
-
     private ServerSocket serverSocket;
-
     private volatile boolean running;
-
-    // Define constants for max retries and buffer size for file transfer
     private static final int MAX_RETRIES = 3;
     private static final int BUFFER_SIZE = 4096;
-
-    // Add tracking server IP and port as class members
-
-    // Use the ServerInfo class to store the tracking server information
     private final ServerInfo trackingServer;
 
     public PeerNode(String fileDirectory, int port, String latencyFilePath, String trackingServerIp, int trackingServerPort) {
@@ -187,9 +177,7 @@ public class PeerNode {
     private void handleFileDownloadRequest(ObjectInputStream inputStream, ObjectOutputStream outputStream, Socket socket) throws IOException {
         try {
             String filename = (String) inputStream.readObject();
-//            loadIndex.incrementAndGet(); // Increment the load index
             sendFile(filename, socket);
-//            loadIndex.decrementAndGet(); // Decrement the load index
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -215,58 +203,56 @@ public class PeerNode {
         }
     }
 
-public String downloadFile(String filename, List<String> peerList, double loadWeight) {
-    String bestPeer = selectBestPeer(peerList, loadWeight);
-    int retryCount = 0;
-    boolean successfulDownload = false;
+    public String downloadFile(String filename, List<String> peerList, double loadWeight) {
+        String bestPeer = selectBestPeer(peerList, loadWeight);
+        int retryCount = 0;
+        boolean successfulDownload = false;
 
-    while (bestPeer != null && !successfulDownload && retryCount < MAX_RETRIES) {
-        String[] parts = bestPeer.split(":");
-        String ipAddress = parts[0];
-        int port = Integer.parseInt(parts[1]);
+        while (bestPeer != null && !successfulDownload && retryCount < MAX_RETRIES) {
+            String[] parts = bestPeer.split(":");
+            String ipAddress = parts[0];
+            int port = Integer.parseInt(parts[1]);
 
-        downloadFile(filename, ipAddress, port);
+            downloadFile(filename, ipAddress, port);
 
-        String computedChecksum = null;
-        try {
-            computedChecksum = computeChecksum(new File(fileDirectory, filename).toPath());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            String computedChecksum = null;
+            try {
+                computedChecksum = computeChecksum(new File(fileDirectory, filename).toPath());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            String originalChecksum = findFile(filename).get(0).split(":")[2];
+
+            if (!computedChecksum.equals(originalChecksum)) {
+                retryCount++;
+            } else {
+                successfulDownload = true;
+            }
+
+            if (!successfulDownload && retryCount == MAX_RETRIES) {
+                peerList.remove(bestPeer);
+                bestPeer = selectBestPeer(peerList, loadWeight);
+                retryCount = 0;
+            }
         }
-        String originalChecksum = findFile(filename).get(0).split(":")[2];
+        if (successfulDownload) {
+            System.out.println("File download successful.");
+            System.out.println("File downloaded from: " + bestPeer);
 
-        if (!computedChecksum.equals(originalChecksum)) {
-            retryCount++;
+            // Update the file list and inform the tracking server
+            try {
+                fileChecksums.put(filename, computeChecksum(new File(fileDirectory, filename).toPath()));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            updateFileList();
+
         } else {
-            successfulDownload = true;
+            System.out.println("File download failed after trying all available peers.");
         }
 
-        if (!successfulDownload && retryCount == MAX_RETRIES) {
-            peerList.remove(bestPeer);
-            bestPeer = selectBestPeer(peerList, loadWeight);
-            retryCount = 0;
-        }
+        return bestPeer;
     }
-    if (successfulDownload) {
-        System.out.println("File download successful.");
-        System.out.println("File downloaded from: " + bestPeer);
-
-        // Update the file list and inform the tracking server
-        try {
-            fileChecksums.put(filename, computeChecksum(new File(fileDirectory, filename).toPath()));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        updateFileList();
-
-    } else {
-        System.out.println("File download failed after trying all available peers.");
-    }
-
-    return bestPeer;
-}
-
-
 
     private void sendFile(String filename, Socket socket) throws IOException {
         File file = new File(fileDirectory, filename);

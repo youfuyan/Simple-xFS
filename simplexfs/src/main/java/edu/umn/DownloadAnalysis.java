@@ -63,7 +63,7 @@ public class DownloadAnalysis {
         peerNode5.updateFileList();
 
         // Initialize necessary variables
-        int numDownloads = 100;
+        int numDownloads = 20;
         String fileName = "test10Mb.db";
         ArrayList<Long> downloadTimes = new ArrayList<>();
         ArrayList<Integer> latencies_peer2_1 = new ArrayList<>();

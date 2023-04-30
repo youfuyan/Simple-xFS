@@ -20,7 +20,6 @@ public class TrackingServer {
 
     private volatile boolean running;
 
-    // Add a set to store known peers
     private final Set<String> knownPeers;
 
     private final ThreadPoolExecutor executor;
@@ -242,7 +241,7 @@ public class TrackingServer {
     }
 
 
-    public void broadcastSendInfoRequest() {
+    public void broadcastRequest() {
         for (String peerAddress : knownPeers) {
             String[] addressParts = peerAddress.split(":");
             String ipAddress = addressParts[0];
@@ -271,7 +270,7 @@ public class TrackingServer {
             }
             timeoutExecutor.schedule(() -> {
                 // Check if all known peers have responded
-                // If not, perform necessary actions (e.g., remove unresponsive peers)
+                // If not remove unresponsive peers from the list of known peers
                 if (!peerInfoReceived.contains(peerAddress)) {
                     System.out.println("Peer " + peerAddress + " did not respond to RECOVER_SERVER request");
                     knownPeers.remove(peerAddress);
@@ -281,10 +280,10 @@ public class TrackingServer {
         }
     }
 
-    // Add a new method to initiate the recovery process
+    // Initiate the recovery process
     private void recoverServer() {
         System.out.println("Recovering server state...");
-        broadcastSendInfoRequest();
+        broadcastRequest();
         try {
             TimeUnit.SECONDS.sleep(RECOVERY_TIMEOUT_SECONDS);
         } catch (InterruptedException e) {
